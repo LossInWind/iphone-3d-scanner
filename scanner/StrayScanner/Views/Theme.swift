@@ -176,6 +176,38 @@ struct StatItem: View {
     }
 }
 
+// MARK: - 紧凑型统计信息项
+
+struct MiniStatItem: View {
+    let icon: String
+    let value: String
+    let label: String
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.xs) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundColor(AppColors.accent)
+            
+            VStack(alignment: .leading, spacing: 0) {
+                Text(value)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(AppColors.primary)
+                
+                Text(label)
+                    .font(.system(size: 10))
+                    .foregroundColor(AppColors.secondary)
+            }
+        }
+        .padding(.horizontal, AppSpacing.sm)
+        .padding(.vertical, AppSpacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: AppCorners.small)
+                .fill(AppColors.cardBackground)
+        )
+    }
+}
+
 // MARK: - 状态标签
 
 struct StatusBadge: View {

@@ -407,37 +407,30 @@ struct SessionList: View {
     // MARK: - 统计头部
     
     private var statsHeader: some View {
-        CardView(padding: AppSpacing.md) {
-            HStack(spacing: AppSpacing.md) {
-                StatItem(
-                    icon: "folder.fill",
-                    title: "数据集",
-                    value: "\(viewModel.totalRecordings)"
-                )
-                
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 1, height: 50)
-                
-                StatItem(
-                    icon: "internaldrive.fill",
-                    title: "存储占用",
-                    value: viewModel.totalStorageUsed
-                )
-                
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 1, height: 50)
-                
-                StatItem(
-                    icon: "clock.fill",
-                    title: "总时长",
-                    value: totalDuration
-                )
-            }
+        HStack(spacing: AppSpacing.sm) {
+            // 数据集数量
+            MiniStatItem(
+                icon: "folder.fill",
+                value: "\(viewModel.totalRecordings)",
+                label: "数据集"
+            )
+            
+            // 存储占用
+            MiniStatItem(
+                icon: "internaldrive.fill",
+                value: viewModel.totalStorageUsed,
+                label: "存储"
+            )
+            
+            // 总时长
+            MiniStatItem(
+                icon: "clock.fill",
+                value: totalDuration,
+                label: "时长"
+            )
         }
         .padding(.horizontal, AppSpacing.md)
-        .padding(.top, AppSpacing.sm)
+        .padding(.vertical, AppSpacing.xs)
     }
     
     private var totalDuration: String {
@@ -454,19 +447,11 @@ struct SessionList: View {
     
     private var sessionListContent: some View {
         ScrollView {
-            LazyVStack(spacing: AppSpacing.sm) {
-                // 搜索栏
-                searchBar
+            LazyVStack(spacing: AppSpacing.xs) {
+                // 搜索栏（更紧凑）
+                compactSearchBar
                     .padding(.horizontal, AppSpacing.md)
-                    .padding(.top, AppSpacing.sm)
-                
-                // 提示文字
-                if !isSelectionMode {
-                    Text("长按可进入选择模式")
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.secondary.opacity(0.6))
-                        .padding(.top, AppSpacing.xs)
-                }
+                    .padding(.top, AppSpacing.xs)
                 
                 // 列表项
                 ForEach(Array(filteredSessions.enumerated()), id: \.element) { index, recording in
@@ -474,8 +459,32 @@ struct SessionList: View {
                         .padding(.horizontal, AppSpacing.md)
                 }
             }
-            .padding(.bottom, 100)
+            .padding(.bottom, 90) // 减少底部 padding
         }
+    }
+    
+    private var compactSearchBar: some View {
+        HStack(spacing: AppSpacing.xs) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14))
+                .foregroundColor(AppColors.secondary)
+            
+            TextField("搜索...", text: $searchText)
+                .font(AppFonts.caption)
+                .foregroundColor(AppColors.primary)
+            
+            if !isSelectionMode {
+                Text("长按选择")
+                    .font(.system(size: 10))
+                    .foregroundColor(AppColors.secondary.opacity(0.5))
+            }
+        }
+        .padding(.horizontal, AppSpacing.sm)
+        .padding(.vertical, AppSpacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: AppCorners.small)
+                .fill(AppColors.cardBackground)
+        )
     }
     
     private func sessionRowItem(recording: Recording) -> some View {
@@ -525,21 +534,6 @@ struct SessionList: View {
                 }
             }
         }
-    }
-    
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(AppColors.secondary)
-            
-            TextField("搜索录制...", text: $searchText)
-                .foregroundColor(AppColors.primary)
-        }
-        .padding(AppSpacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: AppCorners.medium)
-                .fill(AppColors.cardBackground)
-        )
     }
     
     // MARK: - 空状态
@@ -626,35 +620,31 @@ struct SessionList: View {
     // MARK: - 底部录制按钮
     
     private var bottomRecordButton: some View {
-        VStack {
-            Spacer()
-            
-            NavigationLink(destination: NewSessionView()) {
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: "record.circle")
-                        .font(.system(size: 22, weight: .semibold))
-                    Text("开始新录制")
-                        .font(AppFonts.headline)
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, AppSpacing.md)
-                .background(
-                    RoundedRectangle(cornerRadius: AppCorners.extraLarge)
-                        .fill(AppColors.primaryGradient)
-                        .shadow(color: Color.blue.opacity(0.3), radius: 10, x: 0, y: 5)
-                )
+        NavigationLink(destination: NewSessionView()) {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "record.circle")
+                    .font(.system(size: 20, weight: .semibold))
+                Text("开始新录制")
+                    .font(AppFonts.headline)
             }
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.bottom, AppSpacing.lg)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppSpacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: AppCorners.large)
+                    .fill(AppColors.primaryGradient)
+                    .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+            )
         }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.bottom, AppSpacing.md)
         .background(
             LinearGradient(
                 colors: [AppColors.background.opacity(0), AppColors.background],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 120)
+            .frame(height: 80)
             .allowsHitTesting(false)
         )
     }
@@ -833,48 +823,51 @@ struct SessionRowCard: View {
     @State private var fileSize: String = "..."
     
     var body: some View {
-        CardView(padding: AppSpacing.sm) {
-            HStack(spacing: AppSpacing.md) {
-                // 选择指示器
-                if isSelectionMode {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 24))
-                        .foregroundColor(isSelected ? AppColors.accent : AppColors.secondary.opacity(0.5))
-                }
+        HStack(spacing: AppSpacing.sm) {
+            // 选择指示器
+            if isSelectionMode {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundColor(isSelected ? AppColors.accent : AppColors.secondary.opacity(0.5))
+            }
+            
+            // 缩略图（更小）
+            thumbnailView
+            
+            // 信息
+            VStack(alignment: .leading, spacing: 2) {
+                Text(sessionTitle())
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(AppColors.primary)
+                    .lineLimit(1)
                 
-                // 缩略图
-                thumbnailView
-                
-                // 信息
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(sessionTitle())
-                        .font(AppFonts.headline)
-                        .foregroundColor(AppColors.primary)
-                        .lineLimit(1)
+                HStack(spacing: AppSpacing.sm) {
+                    Label(formattedDuration, systemImage: "clock")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.secondary)
                     
-                    HStack(spacing: AppSpacing.md) {
-                        Label(formattedDuration, systemImage: "clock")
-                            .font(AppFonts.caption)
-                            .foregroundColor(AppColors.secondary)
-                        
-                        Label(fileSize, systemImage: "doc")
-                            .font(AppFonts.caption)
-                            .foregroundColor(AppColors.secondary)
-                    }
-                }
-                
-                Spacer()
-                
-                // 箭头（非选择模式时显示）
-                if !isSelectionMode {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(AppColors.secondary.opacity(0.5))
+                    Label(fileSize, systemImage: "doc")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.secondary)
                 }
             }
+            
+            Spacer()
+            
+            // 箭头（非选择模式时显示）
+            if !isSelectionMode {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.secondary.opacity(0.5))
+            }
         }
+        .padding(AppSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: AppCorners.medium)
+                .fill(AppColors.cardBackground)
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: AppCorners.large)
+            RoundedRectangle(cornerRadius: AppCorners.medium)
                 .stroke(isSelected ? AppColors.accent : Color.clear, lineWidth: 2)
         )
         .onAppear {
@@ -894,11 +887,12 @@ struct SessionRowCard: View {
                     .fill(AppColors.cardBackgroundDark)
                     .overlay(
                         Image(systemName: "video.fill")
+                            .font(.system(size: 14))
                             .foregroundColor(AppColors.secondary.opacity(0.5))
                     )
             }
         }
-        .frame(width: 80, height: 60)
+        .frame(width: 56, height: 42)
         .cornerRadius(AppCorners.small)
         .clipped()
     }
