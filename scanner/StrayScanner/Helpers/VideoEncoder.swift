@@ -46,9 +46,11 @@ class VideoEncoder {
 
     func add(frame: VideoEncoderInput, currentFrame: Int) {
         previousFrame = currentFrame
-        while !videoWriterInput!.isReadyForMoreMediaData {
-            print("Sleeping.")
-            Thread.sleep(until: Date() + TimeInterval(0.01))
+        // 检查是否准备好接收更多数据，如果没有则跳过此帧
+        // 避免阻塞主线程，防止 ARFrame 积压
+        guard videoWriterInput!.isReadyForMoreMediaData else {
+            // 编码器繁忙，跳过此帧
+            return
         }
         encode(frame: frame, frameNumber: currentFrame)
     }

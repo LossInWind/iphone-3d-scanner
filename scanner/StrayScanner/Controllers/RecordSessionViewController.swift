@@ -44,6 +44,9 @@ class RecordSessionViewController : UIViewController, ARSessionDelegate {
     private var chosenFpsSetting: Int = 0
     private var frameCount: Int = 0
     
+    // 帧处理队列 - 用于异步处理 ARFrame 数据
+    private let frameProcessingQueue = DispatchQueue(label: "frameProcessingQueue", qos: .userInitiated)
+    
     // 状态指示器
     private var statusIndicator: UIView?
     private var viewModeLabel: UILabel?
@@ -379,15 +382,21 @@ class RecordSessionViewController : UIViewController, ARSessionDelegate {
     }
 
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        // 渲染当前帧（这是同步的，但很快）
         self.renderer!.render(frame: frame)
+        
+        // 如果正在录制，立即提取数据并释放 ARFrame
         if startedRecording != nil {
             if let encoder = datasetEncoder {
+                // 在主线程上快速提取必要的数据
+                // 这样 ARFrame 可以在 delegate 方法返回后立即被释放
                 encoder.add(frame: frame)
                 frameCount += 1
             } else {
                 print("There is no video encoder. That can't be good.")
             }
         }
+        // ARFrame 在这里离开作用域，应该被立即释放
     }
 
     private func setViewProperties() {

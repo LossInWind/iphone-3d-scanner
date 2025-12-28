@@ -106,8 +106,18 @@ class DatasetEncoder {
         
         // 在主线程上快速复制 CVPixelBuffer 数据
         // 这是必须的，因为 CVPixelBuffer 与 ARFrame 共享内存
-        guard let depthMapCopy = copyPixelBuffer(sceneDepth.depthMap),
-              let capturedImageCopy = copyPixelBuffer(frame.capturedImage) else {
+        // 使用 autoreleasepool 确保临时对象被及时释放
+        var depthMapCopy: CVPixelBuffer?
+        var capturedImageCopy: CVPixelBuffer?
+        var confidenceMapCopy: CVPixelBuffer?
+        
+        autoreleasepool {
+            depthMapCopy = copyPixelBuffer(sceneDepth.depthMap)
+            capturedImageCopy = copyPixelBuffer(frame.capturedImage)
+            confidenceMapCopy = sceneDepth.confidenceMap.flatMap { copyPixelBuffer($0) }
+        }
+        
+        guard let depthCopy = depthMapCopy, let imageCopy = capturedImageCopy else {
             savedFrames -= 1
             pendingLock.lock()
             pendingFrames -= 1
@@ -115,20 +125,20 @@ class DatasetEncoder {
             return
         }
         
-        let confidenceMapCopy = sceneDepth.confidenceMap.flatMap { copyPixelBuffer($0) }
-        
         // 现在 ARFrame 可以被释放了，因为我们已经复制了所有需要的数据
         // 使用异步队列处理编码（耗时操作）
         queue.async { [weak self] in
             guard let self = self else { return }
             
-            // 执行编码（使用复制后的数据）
-            self.depthEncoder.encodeFrame(frame: depthMapCopy, frameNumber: frameNumber)
-            if let confidence = confidenceMapCopy {
-                self.confidenceEncoder.encodeFrame(frame: confidence, frameNumber: frameNumber)
+            autoreleasepool {
+                // 执行编码（使用复制后的数据）
+                self.depthEncoder.encodeFrame(frame: depthCopy, frameNumber: frameNumber)
+                if let confidence = confidenceMapCopy {
+                    self.confidenceEncoder.encodeFrame(frame: confidence, frameNumber: frameNumber)
+                }
+                self.rgbEncoder.add(frame: VideoEncoderInput(buffer: imageCopy, time: timestamp), currentFrame: totalFrames)
+                self.odometryEncoder.addPose(transform: cameraTransform, timestamp: timestamp, frameNumber: frameNumber)
             }
-            self.rgbEncoder.add(frame: VideoEncoderInput(buffer: capturedImageCopy, time: timestamp), currentFrame: totalFrames)
-            self.odometryEncoder.addPose(transform: cameraTransform, timestamp: timestamp, frameNumber: frameNumber)
             
             // 编码完成，减少计数
             self.pendingLock.lock()

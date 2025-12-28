@@ -35,6 +35,11 @@ class CameraRenderer {
     private var depthTexture: MTLTexture!
     private lazy var textureCache: CVMetalTextureCache = makeTextureCache()
     
+    // 缓存的 CVMetalTexture 引用，用于控制生命周期
+    private var cachedRgbTextureY: CVMetalTexture?
+    private var cachedRgbTextureCbCr: CVMetalTexture?
+    private var cachedDepthTexture: CVMetalTexture?
+    
     public var renderMode: RenderMode = RenderMode.depth 
 
     init(rgbLayer: CAMetalLayer, depthLayer: CAMetalLayer) {
@@ -52,6 +57,9 @@ class CameraRenderer {
                 updateRGBTexture(frame: frame)
                 renderRGB()
         }
+        // 渲染完成后刷新纹理缓存，释放对 ARFrame CVPixelBuffer 的引用
+        // 这样 ARFrame 可以被 ARSession 回收
+        flushTextureCache()
     }
 
     private func renderRGB() {
@@ -159,18 +167,32 @@ class CameraRenderer {
     }
 
     private func updateRGBTexture(frame: ARFrame) {
+        // 先清除旧的缓存引用，释放之前的 CVPixelBuffer
+        cachedRgbTextureY = nil
+        cachedRgbTextureCbCr = nil
+        
         let colorImage = frame.capturedImage
-        rgbTextureY = createTexture(fromPixelBuffer: colorImage, pixelFormat: .r8Unorm, planeIndex: 0)!
-        rgbTextureCbCr = createTexture(fromPixelBuffer: colorImage, pixelFormat: .rg8Unorm, planeIndex: 1)!
+        let (textureY, cvTextureY) = createTextureWithCache(fromPixelBuffer: colorImage, pixelFormat: .r8Unorm, planeIndex: 0)
+        let (textureCbCr, cvTextureCbCr) = createTextureWithCache(fromPixelBuffer: colorImage, pixelFormat: .rg8Unorm, planeIndex: 1)
+        
+        rgbTextureY = textureY
+        rgbTextureCbCr = textureCbCr
+        cachedRgbTextureY = cvTextureY
+        cachedRgbTextureCbCr = cvTextureCbCr
     }
 
     private func updateDepthTexture(frame: ARFrame) {
+        // 先清除旧的缓存引用
+        cachedDepthTexture = nil
+        
         guard let sceneDepth = frame.sceneDepth else { return }
         let depthImage = sceneDepth.depthMap
-        depthTexture = createTexture(fromPixelBuffer: depthImage, pixelFormat: .r32Float, planeIndex: 0)
+        let (texture, cvTexture) = createTextureWithCache(fromPixelBuffer: depthImage, pixelFormat: .r32Float, planeIndex: 0)
+        depthTexture = texture
+        cachedDepthTexture = cvTexture
     }
 
-    private func createTexture(fromPixelBuffer pixelBuffer: CVPixelBuffer, pixelFormat: MTLPixelFormat, planeIndex: Int) -> MTLTexture? {
+    private func createTextureWithCache(fromPixelBuffer pixelBuffer: CVPixelBuffer, pixelFormat: MTLPixelFormat, planeIndex: Int) -> (MTLTexture?, CVMetalTexture?) {
         var mtlTexture: MTLTexture? = nil
         let width = CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex)
         let height = CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex)
@@ -181,7 +203,20 @@ class CameraRenderer {
             mtlTexture = CVMetalTextureGetTexture(texture!)
         }
 
-        return mtlTexture
+        return (mtlTexture, texture)
+    }
+
+    private func createTexture(fromPixelBuffer pixelBuffer: CVPixelBuffer, pixelFormat: MTLPixelFormat, planeIndex: Int) -> MTLTexture? {
+        let (texture, _) = createTextureWithCache(fromPixelBuffer: pixelBuffer, pixelFormat: pixelFormat, planeIndex: planeIndex)
+        return texture
+    }
+    
+    /// 清除纹理缓存，释放对 CVPixelBuffer 的引用
+    func flushTextureCache() {
+        cachedRgbTextureY = nil
+        cachedRgbTextureCbCr = nil
+        cachedDepthTexture = nil
+        CVMetalTextureCacheFlush(textureCache, 0)
     }
 
     private func makeTextureCache() -> CVMetalTextureCache {
