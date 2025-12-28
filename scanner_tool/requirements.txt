@@ -1,0 +1,60 @@
+# Scanner Tool Dependencies
+# ============================================
+# 重要：请使用 conda 环境运行本工具
+# conda activate scanner_tool
+# ============================================
+
+# 基础依赖 (所有平台必需)
+numpy>=1.20
+scipy>=1.6.0
+
+# 图像处理
+pillow>=8.1.0
+opencv-python>=4.1
+scikit-image>=0.18
+
+# 3D 可视化
+open3d>=0.12.0
+
+# 视频处理
+scikit-video>=1.1.11
+
+# 深度学习 (PyTorch - 自动选择 CUDA/MPS/CPU)
+torch>=2.0
+torchvision>=0.15
+
+# 特征存储
+h5py>=3.0
+
+# GUI 标注工具
+PyQt6>=6.0
+
+# 工具库
+tqdm
+rich
+matplotlib
+trimesh
+
+# 可选依赖 (部分功能需要)
+# numba
+# tensorboardX
+
+# ============================================
+# CLIP 文本查询 (可选，用于 query 命令)
+# ============================================
+# pip install git+https://github.com/openai/CLIP.git
+
+# ============================================
+# 以下依赖仅在 Linux/Windows + NVIDIA GPU 上需要
+# 用于完整的 3D 语义分割功能
+# ============================================
+
+# tiny-cuda-nn (需要 CUDA 编译)
+# pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
+
+# Hierarchical-Localization (需要 COLMAP，用于 SfM)
+# git clone --recursive https://github.com/cvg/Hierarchical-Localization.git
+# pip install -e Hierarchical-Localization/
+
+# LSeg 模型检查点
+# 下载地址: https://github.com/isl-org/lang-seg
