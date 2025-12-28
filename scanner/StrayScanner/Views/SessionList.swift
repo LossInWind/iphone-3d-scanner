@@ -322,12 +322,12 @@ struct SessionList: View {
                     exitSelectionMode()
                 }) {
                     Text("取消")
-                        .font(.system(size: 15))
+                        .font(.system(size: 17))
                         .foregroundColor(AppColors.accent)
                 }
             } else {
                 Text("扫描数据")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(AppColors.primary)
             }
             
@@ -338,18 +338,18 @@ struct SessionList: View {
                     selectAll()
                 }) {
                     Text(selectedRecordings.count == viewModel.sessions.count ? "取消全选" : "全选")
-                        .font(.system(size: 15))
+                        .font(.system(size: 17))
                         .foregroundColor(AppColors.accent)
                 }
             } else {
                 IconButton(icon: "info.circle", action: {
                     showingInfo.toggle()
-                }, size: 32, iconSize: 16)
+                }, size: 44, iconSize: 20)
             }
         }
         .padding(.horizontal, AppSpacing.md)
-        .padding(.top, 6)
-        .padding(.bottom, 4)
+        .padding(.top, AppSpacing.sm)
+        .padding(.bottom, AppSpacing.sm)
     }
     
     // MARK: - 选择模式头部
@@ -407,30 +407,30 @@ struct SessionList: View {
     // MARK: - 统计头部
     
     private var statsHeader: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 10) {
             // 数据集数量
-            MiniStatItem(
+            FullWidthStatItem(
                 icon: "folder.fill",
                 value: "\(viewModel.totalRecordings)",
                 label: "数据集"
             )
             
             // 存储占用
-            MiniStatItem(
+            FullWidthStatItem(
                 icon: "internaldrive.fill",
                 value: viewModel.totalStorageUsed,
                 label: "存储"
             )
             
             // 总时长
-            MiniStatItem(
+            FullWidthStatItem(
                 icon: "clock.fill",
                 value: totalDuration,
                 label: "时长"
             )
         }
         .padding(.horizontal, AppSpacing.md)
-        .padding(.vertical, 4)
+        .padding(.vertical, AppSpacing.xs)
     }
     
     private var totalDuration: String {
@@ -447,11 +447,11 @@ struct SessionList: View {
     
     private var sessionListContent: some View {
         ScrollView {
-            LazyVStack(spacing: 6) {
-                // 搜索栏（更紧凑）
+            LazyVStack(spacing: AppSpacing.sm) {
+                // 搜索栏
                 compactSearchBar
                     .padding(.horizontal, AppSpacing.md)
-                    .padding(.top, AppSpacing.xs)
+                    .padding(.top, AppSpacing.sm)
                 
                 // 列表项
                 ForEach(Array(filteredSessions.enumerated()), id: \.element) { index, recording in
@@ -459,28 +459,28 @@ struct SessionList: View {
                         .padding(.horizontal, AppSpacing.md)
                 }
             }
-            .padding(.bottom, 70) // 减少底部 padding，给底部按钮留空间
+            .padding(.bottom, 100) // 底部 padding，给底部按钮留空间
         }
     }
     
     private var compactSearchBar: some View {
-        HStack(spacing: AppSpacing.xs) {
+        HStack(spacing: AppSpacing.sm) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 12))
+                .font(.system(size: 14))
                 .foregroundColor(AppColors.secondary)
             
             TextField("搜索...", text: $searchText)
-                .font(.system(size: 13))
+                .font(.system(size: 15))
                 .foregroundColor(AppColors.primary)
             
             if !isSelectionMode {
                 Text("长按选择")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundColor(AppColors.secondary.opacity(0.5))
             }
         }
         .padding(.horizontal, AppSpacing.sm)
-        .padding(.vertical, 6)
+        .padding(.vertical, AppSpacing.sm)
         .background(
             RoundedRectangle(cornerRadius: AppCorners.small)
                 .fill(AppColors.cardBackground)
@@ -623,28 +623,28 @@ struct SessionList: View {
         NavigationLink(destination: NewSessionView()) {
             HStack(spacing: AppSpacing.sm) {
                 Image(systemName: "record.circle")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                 Text("开始新录制")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.vertical, AppSpacing.md)
             .background(
                 RoundedRectangle(cornerRadius: AppCorners.medium)
                     .fill(AppColors.primaryGradient)
-                    .shadow(color: Color.blue.opacity(0.3), radius: 6, x: 0, y: 3)
+                    .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
             )
         }
         .padding(.horizontal, AppSpacing.md)
-        .padding(.bottom, AppSpacing.sm)
+        .padding(.bottom, AppSpacing.md)
         .background(
             LinearGradient(
                 colors: [AppColors.background.opacity(0), AppColors.background],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 60)
+            .frame(height: 80)
             .allowsHitTesting(false)
         )
     }
@@ -827,27 +827,27 @@ struct SessionRowCard: View {
             // 选择指示器
             if isSelectionMode {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
+                    .font(.system(size: 22))
                     .foregroundColor(isSelected ? AppColors.accent : AppColors.secondary.opacity(0.5))
             }
             
-            // 缩略图（更小）
+            // 缩略图
             thumbnailView
             
             // 信息
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(sessionTitle())
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(AppColors.primary)
                     .lineLimit(1)
                 
                 HStack(spacing: AppSpacing.sm) {
                     Label(formattedDuration, systemImage: "clock")
-                        .font(.system(size: 10))
+                        .font(.system(size: 12))
                         .foregroundColor(AppColors.secondary)
                     
                     Label(fileSize, systemImage: "doc")
-                        .font(.system(size: 10))
+                        .font(.system(size: 12))
                         .foregroundColor(AppColors.secondary)
                 }
             }
@@ -857,12 +857,12 @@ struct SessionRowCard: View {
             // 箭头（非选择模式时显示）
             if !isSelectionMode {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(AppColors.secondary.opacity(0.5))
             }
         }
         .padding(.horizontal, AppSpacing.sm)
-        .padding(.vertical, 8)
+        .padding(.vertical, AppSpacing.sm)
         .background(
             RoundedRectangle(cornerRadius: AppCorners.small)
                 .fill(AppColors.cardBackground)
@@ -888,13 +888,13 @@ struct SessionRowCard: View {
                     .fill(AppColors.cardBackgroundDark)
                     .overlay(
                         Image(systemName: "video.fill")
-                            .font(.system(size: 12))
+                            .font(.system(size: 16))
                             .foregroundColor(AppColors.secondary.opacity(0.5))
                     )
             }
         }
-        .frame(width: 48, height: 36)
-        .cornerRadius(6)
+        .frame(width: 60, height: 45)
+        .cornerRadius(8)
         .clipped()
     }
     

@@ -184,25 +184,60 @@ struct MiniStatItem: View {
     let label: String
     
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 10))
+                .font(.system(size: 12))
                 .foregroundColor(AppColors.accent)
             
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(AppColors.primary)
                 
                 Text(label)
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundColor(AppColors.secondary)
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
+        .padding(.horizontal, AppSpacing.sm)
+        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(AppColors.cardBackground)
+        )
+    }
+}
+
+// MARK: - 全宽统计信息项（自适应宽度）
+
+struct FullWidthStatItem: View {
+    let icon: String
+    let value: String
+    let label: String
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            // 图标
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(AppColors.accent)
+            
+            // 数值
+            Text(value)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundColor(AppColors.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            
+            // 标签
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(AppColors.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
                 .fill(AppColors.cardBackground)
         )
     }
