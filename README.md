@@ -2,6 +2,8 @@
 
 一个完整的 3D 扫描解决方案，包含 iOS 扫描应用和 PC 端处理工具。
 
+> **致谢**: 本项目基于 [Stray Robots Scanner](https://github.com/StrayRobots/scanner) 开发，感谢原作者的开源贡献！
+
 ## 项目结构
 
 ```
@@ -65,6 +67,14 @@ iOS App 可以通过 WiFi 直接将扫描数据传输到 PC：
 1. 在 PC 上启动接收服务器：`scanner-tool server`
 2. 确保手机和电脑在同一 WiFi 网络
 3. 在 App 中输入服务器地址并传输
+
+## 参考项目
+
+本项目参考和基于以下开源项目开发：
+
+- **[Stray Robots Scanner](https://github.com/StrayRobots/scanner)** - 原始 iOS 扫描应用
+- **[StrayVisualizer](https://github.com/kekeblom/StrayVisualizer)** - 数据可视化工具
+- **[Autolabel](https://github.com/ethz-asl/autolabel)** - 交互式体积标注工具
 
 ## 许可证
 

@@ -197,19 +197,25 @@ struct InformationView: View {
                     linkButton(
                         icon: "chevron.left.forwardslash.chevron.right",
                         title: "GitHub 源代码",
-                        url: "https://github.com/StrayRobots/scanner"
+                        url: "https://github.com/LossInWind/iphone-3d-scanner"
                     )
                     
                     linkButton(
                         icon: "book",
                         title: "使用文档",
-                        url: "https://github.com/StrayRobots/scanner#readme"
+                        url: "https://github.com/LossInWind/iphone-3d-scanner#readme"
                     )
                     
                     linkButton(
                         icon: "exclamationmark.bubble",
                         title: "报告问题",
-                        url: "https://github.com/StrayRobots/scanner/issues"
+                        url: "https://github.com/LossInWind/iphone-3d-scanner/issues"
+                    )
+                    
+                    linkButton(
+                        icon: "heart.fill",
+                        title: "原始项目 (Stray Robots)",
+                        url: "https://github.com/StrayRobots/scanner"
                     )
                 }
             }
@@ -269,7 +275,7 @@ struct InformationView: View {
                 .font(AppFonts.caption)
                 .foregroundColor(AppColors.secondary)
             
-            Text("© 2020-2024 Stray Robots")
+            Text("基于 Stray Robots Scanner 开发")
                 .font(AppFonts.caption2)
                 .foregroundColor(AppColors.secondary.opacity(0.7))
         }
