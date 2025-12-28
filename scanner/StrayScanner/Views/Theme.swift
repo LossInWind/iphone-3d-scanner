@@ -184,25 +184,25 @@ struct MiniStatItem: View {
     let label: String
     
     var body: some View {
-        HStack(spacing: AppSpacing.xs) {
+        HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 12))
+                .font(.system(size: 10))
                 .foregroundColor(AppColors.accent)
             
             VStack(alignment: .leading, spacing: 0) {
                 Text(value)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundColor(AppColors.primary)
                 
                 Text(label)
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundColor(AppColors.secondary)
             }
         }
-        .padding(.horizontal, AppSpacing.sm)
-        .padding(.vertical, AppSpacing.xs)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: AppCorners.small)
+            RoundedRectangle(cornerRadius: 6)
                 .fill(AppColors.cardBackground)
         )
     }
