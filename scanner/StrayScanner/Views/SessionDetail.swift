@@ -380,13 +380,68 @@ struct SessionDetailView: View {
     private func shareDataset() {
         guard let dirPath = recording.directoryPath() else { return }
         
+        // 确保目录存在
+        guard FileManager.default.fileExists(atPath: dirPath.path) else {
+            print("Directory does not exist: \(dirPath.path)")
+            return
+        }
+        
+        // 创建一个临时 zip 文件用于分享
+        let zipFileName = "\(recording.name ?? "dataset").zip"
+        let tempDir = FileManager.default.temporaryDirectory
+        let zipURL = tempDir.appendingPathComponent(zipFileName)
+        
+        // 删除旧的 zip 文件（如果存在）
+        try? FileManager.default.removeItem(at: zipURL)
+        
+        // 使用 FileManager 压缩目录
+        do {
+            // 创建 zip 归档
+            let coordinator = NSFileCoordinator()
+            var error: NSError?
+            
+            coordinator.coordinate(readingItemAt: dirPath, options: .forUploading, error: &error) { zipTempURL in
+                do {
+                    try FileManager.default.copyItem(at: zipTempURL, to: zipURL)
+                } catch {
+                    print("Failed to copy zip: \(error)")
+                }
+            }
+            
+            if let error = error {
+                print("Coordination error: \(error)")
+                // 如果压缩失败，直接分享目录
+                presentShareSheet(items: [dirPath])
+                return
+            }
+            
+            // 分享 zip 文件
+            if FileManager.default.fileExists(atPath: zipURL.path) {
+                presentShareSheet(items: [zipURL])
+            } else {
+                // 回退到分享目录
+                presentShareSheet(items: [dirPath])
+            }
+        }
+    }
+    
+    private func presentShareSheet(items: [Any]) {
         let activityVC = UIActivityViewController(
-            activityItems: [dirPath],
+            activityItems: items,
             applicationActivities: nil
         )
         
+        // 设置 iPad 的 popover 位置
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
+            
+            // 对于 iPad，需要设置 popover 的源视图
+            if let popover = activityVC.popoverPresentationController {
+                popover.sourceView = rootVC.view
+                popover.sourceRect = CGRect(x: rootVC.view.bounds.midX, y: rootVC.view.bounds.midY, width: 0, height: 0)
+                popover.permittedArrowDirections = []
+            }
+            
             rootVC.present(activityVC, animated: true)
         }
     }

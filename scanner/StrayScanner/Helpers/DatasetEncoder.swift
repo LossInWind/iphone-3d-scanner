@@ -38,8 +38,11 @@ class DatasetEncoder {
     
     // 队列深度控制 - 防止 ARFrame 积压
     private var pendingFrames: Int = 0
-    private let maxPendingFrames: Int = 3  // 最多允许 3 帧在队列中等待
+    private let maxPendingFrames: Int = 2  // 降低到 2 帧，更激进地控制积压
     private let pendingLock = NSLock()
+    
+    // 帧跳过计数器 - 用于监控
+    private var skippedFrames: Int = 0
     
     private var latestAccelerometerData: (timestamp: Double, data: simd_double3)?
     private var latestGyroscopeData: (timestamp: Double, data: simd_double3)?
@@ -47,7 +50,8 @@ class DatasetEncoder {
 
     init(arConfiguration: ARWorldTrackingConfiguration, fpsDivider: Int = 1) {
         self.frameInterval = fpsDivider
-        self.queue = DispatchQueue(label: "encoderQueue")
+        // 使用高优先级队列加速编码
+        self.queue = DispatchQueue(label: "encoderQueue", qos: .userInitiated)
         
         let width = arConfiguration.videoFormat.imageResolution.width
         let height = arConfiguration.videoFormat.imageResolution.height
@@ -79,6 +83,7 @@ class DatasetEncoder {
         let currentPending = pendingFrames
         if currentPending >= maxPendingFrames {
             pendingLock.unlock()
+            skippedFrames += 1
             // 队列已满，丢弃此帧以防止 ARFrame 积压
             return
         }
@@ -105,16 +110,19 @@ class DatasetEncoder {
         self.lastCameraIntrinsics = cameraIntrinsics
         
         // 在主线程上快速复制 CVPixelBuffer 数据
-        // 这是必须的，因为 CVPixelBuffer 与 ARFrame 共享内存
         // 使用 autoreleasepool 确保临时对象被及时释放
         var depthMapCopy: CVPixelBuffer?
         var capturedImageCopy: CVPixelBuffer?
         var confidenceMapCopy: CVPixelBuffer?
         
+        // 使用 autoreleasepool 包裹复制操作
         autoreleasepool {
-            depthMapCopy = copyPixelBuffer(sceneDepth.depthMap)
-            capturedImageCopy = copyPixelBuffer(frame.capturedImage)
-            confidenceMapCopy = sceneDepth.confidenceMap.flatMap { copyPixelBuffer($0) }
+            // 优先复制较小的深度图
+            depthMapCopy = copyPixelBufferFast(sceneDepth.depthMap)
+            // 然后复制 RGB 图像
+            capturedImageCopy = copyPixelBufferFast(frame.capturedImage)
+            // 置信度图是可选的
+            confidenceMapCopy = sceneDepth.confidenceMap.flatMap { copyPixelBufferFast($0) }
         }
         
         guard let depthCopy = depthMapCopy, let imageCopy = capturedImageCopy else {
@@ -147,86 +155,64 @@ class DatasetEncoder {
         }
     }
     
-    /// 复制 CVPixelBuffer，使其独立于原始 ARFrame
-    /// 使用 vImage 进行高效内存复制
-    private func copyPixelBuffer(_ pixelBuffer: CVPixelBuffer) -> CVPixelBuffer? {
+    /// 快速复制 CVPixelBuffer - 优化版本
+    private func copyPixelBufferFast(_ pixelBuffer: CVPixelBuffer) -> CVPixelBuffer? {
         let pixelFormat = CVPixelBufferGetPixelFormatType(pixelBuffer)
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
         
-        // 为多平面格式创建带有正确属性的 buffer
         var newPixelBuffer: CVPixelBuffer?
         
+        // 创建带有 IOSurface 属性的 buffer，可能更快
+        let options: [String: Any] = [
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:] as [String: Any]
+        ]
+        
+        let status = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            width,
+            height,
+            pixelFormat,
+            options as CFDictionary,
+            &newPixelBuffer
+        )
+        
+        guard status == kCVReturnSuccess, let destBuffer = newPixelBuffer else {
+            return nil
+        }
+        
+        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+        CVPixelBufferLockBaseAddress(destBuffer, [])
+        
+        defer {
+            CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
+            CVPixelBufferUnlockBaseAddress(destBuffer, [])
+        }
+        
         let planeCount = CVPixelBufferGetPlaneCount(pixelBuffer)
+        
         if planeCount > 0 {
             // 多平面格式 (YUV)
-            var ioSurfaceProperties: [String: Any] = [:]
-            let options: [String: Any] = [
-                kCVPixelBufferIOSurfacePropertiesKey as String: ioSurfaceProperties
-            ]
-            let status = CVPixelBufferCreate(
-                kCFAllocatorDefault,
-                width,
-                height,
-                pixelFormat,
-                options as CFDictionary,
-                &newPixelBuffer
-            )
-            guard status == kCVReturnSuccess, let destBuffer = newPixelBuffer else {
-                return nil
-            }
-            
-            CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
-            CVPixelBufferLockBaseAddress(destBuffer, [])
-            
             for plane in 0..<planeCount {
-                let srcAddr = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, plane)
-                let destAddr = CVPixelBufferGetBaseAddressOfPlane(destBuffer, plane)
+                guard let srcAddr = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, plane),
+                      let destAddr = CVPixelBufferGetBaseAddressOfPlane(destBuffer, plane) else {
+                    continue
+                }
                 let bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, plane)
                 let planeHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, plane)
-                
-                if let src = srcAddr, let dest = destAddr {
-                    // 使用单次 memcpy 复制整个平面（如果行是连续的）
-                    memcpy(dest, src, bytesPerRow * planeHeight)
-                }
+                memcpy(destAddr, srcAddr, bytesPerRow * planeHeight)
             }
-            
-            CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
-            CVPixelBufferUnlockBaseAddress(destBuffer, [])
-            
-            return destBuffer
         } else {
             // 单平面格式
-            let status = CVPixelBufferCreate(
-                kCFAllocatorDefault,
-                width,
-                height,
-                pixelFormat,
-                nil,
-                &newPixelBuffer
-            )
-            
-            guard status == kCVReturnSuccess, let destBuffer = newPixelBuffer else {
+            guard let srcAddr = CVPixelBufferGetBaseAddress(pixelBuffer),
+                  let destAddr = CVPixelBufferGetBaseAddress(destBuffer) else {
                 return nil
             }
-            
-            CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
-            CVPixelBufferLockBaseAddress(destBuffer, [])
-            
-            let srcAddr = CVPixelBufferGetBaseAddress(pixelBuffer)
-            let destAddr = CVPixelBufferGetBaseAddress(destBuffer)
             let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-            
-            if let src = srcAddr, let dest = destAddr {
-                // 使用单次 memcpy 复制整个 buffer
-                memcpy(dest, src, bytesPerRow * height)
-            }
-            
-            CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
-            CVPixelBufferUnlockBaseAddress(destBuffer, [])
-            
-            return destBuffer
+            memcpy(destAddr, srcAddr, bytesPerRow * height)
         }
+        
+        return destBuffer
     }
     
    func addRawAccelerometer(data: CMAccelerometerData) {
