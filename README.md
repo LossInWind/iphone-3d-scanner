@@ -2,6 +2,8 @@
 
 一个完整的 3D 扫描解决方案，包含 iOS 扫描应用和 PC 端处理工具。
 
+> **致谢**: 本项目基于 [Stray Robots Scanner](https://github.com/StrayRobots/scanner) 及其附属软件开发，感谢原作者的开源贡献！
+
 ## 项目结构
 
 ```
